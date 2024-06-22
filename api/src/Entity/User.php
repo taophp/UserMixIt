@@ -6,21 +6,24 @@ use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Types\UlidType;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Uid\Ulid;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
-#[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_USERNAME', fields: ['username'])]
+#[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_NAME', fields: ['name'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(type: UlidType::NAME, unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.ulid_generator')]
+    private ?Ulid $id = null;
 
     #[ORM\Column(length: 180)]
-    private ?string $username = null;
+    private ?string $name = null;
 
     /**
      * @var list<string> The user roles
@@ -34,9 +37,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $mail = null;
-
     /**
      * @var Collection<int, Project>
      */
@@ -46,13 +46,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var Collection<int, Request>
      */
-    #[ORM\OneToMany(mappedBy: 'owner', targetEntity: Request::class)]
+    #[ORM\OneToMany(mappedBy: 'author', targetEntity: Request::class)]
     private Collection $requests;
 
     /**
      * @var Collection<int, Comment>
      */
-    #[ORM\OneToMany(mappedBy: 'owner', targetEntity: Comment::class)]
+    #[ORM\OneToMany(mappedBy: 'author', targetEntity: Comment::class)]
     private Collection $comments;
 
     public function __construct()
@@ -62,19 +62,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->comments = new ArrayCollection();
     }
 
-    public function getId(): ?int
+    public function getId(): ?Ulid
     {
         return $this->id;
     }
 
-    public function getUsername(): ?string
+    public function getName(): ?string
     {
-        return $this->username;
+        return $this->name;
     }
 
-    public function setUsername(string $username): static
+    public function setName(string $name): static
     {
-        $this->username = $username;
+        $this->name = $name;
 
         return $this;
     }
@@ -86,7 +86,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getUserIdentifier(): string
     {
-        return (string) $this->username;
+        return (string) $this->name;
     }
 
     /**
@@ -137,18 +137,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         // $this->plainPassword = null;
     }
 
-    public function getMail(): ?string
-    {
-        return $this->mail;
-    }
-
-    public function setMail(string $mail): static
-    {
-        $this->mail = $mail;
-
-        return $this;
-    }
-
     /**
      * @return Collection<int, Project>
      */
@@ -191,7 +179,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->requests->contains($request)) {
             $this->requests->add($request);
-            $request->setOwner($this);
+            $request->setAuthor($this);
         }
 
         return $this;
@@ -201,8 +189,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if ($this->requests->removeElement($request)) {
             // set the owning side to null (unless already changed)
-            if ($request->getOwner() === $this) {
-                $request->setOwner(null);
+            if ($request->getAuthor() === $this) {
+                $request->setAuthor(null);
             }
         }
 
@@ -221,7 +209,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->comments->contains($comment)) {
             $this->comments->add($comment);
-            $comment->setOwner($this);
+            $comment->setAuthor($this);
         }
 
         return $this;
@@ -231,8 +219,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if ($this->comments->removeElement($comment)) {
             // set the owning side to null (unless already changed)
-            if ($comment->getOwner() === $this) {
-                $comment->setOwner(null);
+            if ($comment->getAuthor() === $this) {
+                $comment->setAuthor(null);
             }
         }
 

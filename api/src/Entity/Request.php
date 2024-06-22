@@ -8,15 +8,18 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Types\UlidType;
+use Symfony\Component\Uid\Ulid;
 
 #[ORM\Entity(repositoryClass: RequestRepository::class)]
 #[ApiResource]
 class Request
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(type: UlidType::NAME, unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.ulid_generator')]
+    private ?Ulid $id = null;
 
     #[ORM\Column(length: 255)]
     private ?string $title = null;
@@ -26,16 +29,16 @@ class Request
 
     #[ORM\ManyToOne(inversedBy: 'requests')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Project $project = null;
+    private ?User $author = null;
 
     #[ORM\ManyToOne(inversedBy: 'requests')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?User $owner = null;
+    private ?Project $project = null;
 
     /**
      * @var Collection<int, Comment>
      */
-    #[ORM\OneToMany(mappedBy: 'request', targetEntity: Comment::class)]
+    #[ORM\OneToMany(mappedBy: 'request', targetEntity: Comment::class, orphanRemoval: true)]
     private Collection $comments;
 
     public function __construct()
@@ -43,7 +46,7 @@ class Request
         $this->comments = new ArrayCollection();
     }
 
-    public function getId(): ?int
+    public function getId(): ?Ulid
     {
         return $this->id;
     }
@@ -72,6 +75,18 @@ class Request
         return $this;
     }
 
+    public function getAuthor(): ?User
+    {
+        return $this->author;
+    }
+
+    public function setAuthor(?User $author): static
+    {
+        $this->author = $author;
+
+        return $this;
+    }
+
     public function getProject(): ?Project
     {
         return $this->project;
@@ -80,18 +95,6 @@ class Request
     public function setProject(?Project $project): static
     {
         $this->project = $project;
-
-        return $this;
-    }
-
-    public function getOwner(): ?User
-    {
-        return $this->owner;
-    }
-
-    public function setOwner(?User $owner): static
-    {
-        $this->owner = $owner;
 
         return $this;
     }
